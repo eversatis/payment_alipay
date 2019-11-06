@@ -16,7 +16,7 @@ class AcquirerAlipay(models.Model):
 
     provider = fields.Selection(selection_add=[('alipay', "AliPay")])
     seller_id = fields.Char("Alipay Seller Id", required=True)
-    alipay_appid = fields.Char("Alipay AppId",required=True)
+    alipay_appid = fields.Char("Alipay AppId", required=True)
     alipay_secret = fields.Binary("Merchant Private Key")
     alipay_public_key = fields.Binary("Alipay Public Key")
     alipay_sign_type = fields.Selection(
@@ -41,20 +41,23 @@ class AcquirerAlipay(models.Model):
         """
         获取支付宝sdk
         """
-        private_key = RSA.importKey(base64.b64decode(
-            self.alipay_secret).decode('utf-8'))
-        public_key = RSA.import_key(base64.b64decode(
-            self.alipay_public_key)).decode('utf-8')
+        try:
+            private_key = RSA.importKey(base64.b64decode(
+                self.alipay_secret).decode('utf-8'))
+            public_key = RSA.import_key(base64.b64decode(
+                self.alipay_public_key)).decode('utf-8')
 
-        if self.environment == "prod":
-            alipay = AliPay(self.alipay_appid, private_key,
-                            sign_type=self.alipay_sign_type)
-            # return_url=params["return_url"],
-            # notify_url=params["notify_url"])
-        else:
-            alipay = AliPay(self.alipay_appid, private_key,
-                            sign_type=self.alipay_sign_type, sandbox=True)
-        return alipay
+            if self.environment == "prod":
+                alipay = AliPay(self.alipay_appid, private_key,
+                                sign_type=self.alipay_sign_type)
+                # return_url=params["return_url"],
+                # notify_url=params["notify_url"])
+            else:
+                alipay = AliPay(self.alipay_appid, private_key,
+                                sign_type=self.alipay_sign_type, sandbox=True)
+            return alipay
+        except Exception as err:
+            _logger.exception(f"生成支付宝客户端失败：{err}")
 
     @api.model
     def _get_alipay_url(self, params=None):
