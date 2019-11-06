@@ -153,9 +153,10 @@ class TxAlipay(models.Model):
             "acquirer_reference": data["trade_no"]
         }
         # 根据支付宝同步返回的信息，去支付宝服务器查询
-        alipay = self.env["payment.acquirer"].sudo().search(
+        payment = self.env["payment.acquirer"].sudo().search(
             [('provider', '=', 'alipay')], limit=1)
-        res = alipay.trade_query(out_trade_no=data["out_trade_no"])
+        alipay = payment._get_alipay()
+        res = alipay.pay.trade_query(out_trade_no=data["out_trade_no"])
         # 校验结果
         if res["code"] == "10000" and res["trade_status"] in ("TRADE_SUCCESS", "TRADE_FINISHED"):
             _logger.info(f"支付单：{data['out_trade_no']} 已成功付款")
