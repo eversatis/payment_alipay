@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record model="payment.acquirer" id="payment_acquirer_alipay">
+            <field name="name">AliPay</field>
+            <field name="image" type="base64" file="payment_alipay/static/description/icon.png"/>
+            <field name="provider">alipay</field>
+            <field name="enviroment">test</field>
+            <field name="alipay_appid">dummy</field>
+            <field name="alipay_sign_type">rsa2</field>
+            <field name="alipay_secret">dummy</field>
+        </record>
+    </data>
+</odoo>
