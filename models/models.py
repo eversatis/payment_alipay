@@ -15,8 +15,10 @@ class AcquirerAlipay(models.Model):
     _inherit = 'payment.acquirer'
 
     provider = fields.Selection(selection_add=[('alipay', "AliPay")])
-    alipay_appid = fields.Char("Alipay AppId")
-    alipay_secret = fields.Binary("Alipay Private Key")
+    seller_id = fields.Char("Alipay Seller Id", required=True)
+    alipay_appid = fields.Char("Alipay AppId",required=True)
+    alipay_secret = fields.Binary("Merchant Private Key")
+    alipay_public_key = fields.Binary("Alipay Public Key")
     alipay_sign_type = fields.Selection(
         selection=[('rsa', 'RSA'), ('rsa2', 'RSA2')], string="Sign Type")
 
@@ -35,29 +37,36 @@ class AcquirerAlipay(models.Model):
         res['fees'].append('alipay')
         return res
 
+    def _get_alipay(self):
+        """
+        获取支付宝sdk
+        """
+        private_key = RSA.importKey(base64.b64decode(
+            self.alipay_secret).decode('utf-8'))
+        public_key = RSA.import_key(base64.b64decode(
+            self.alipay_public_key)).decode('utf-8')
+
+        if self.environment == "prod":
+            alipay = AliPay(self.alipay_appid, private_key,
+                            sign_type=self.alipay_sign_type)
+            # return_url=params["return_url"],
+            # notify_url=params["notify_url"])
+        else:
+            alipay = AliPay(self.alipay_appid, private_key,
+                            sign_type=self.alipay_sign_type, sandbox=True)
+        return alipay
+
     @api.model
     def _get_alipay_url(self, params=None):
         """Alipay URL"""
         base_url = self.env['ir.config_parameter'].sudo(
         ).get_param('web.base.url')
-        params["return_url"] = f'{base_url}{params["return_url"]}'
-        params["notify_url"] = f'{base_url}{params["notify_url"]}'
         # 额外的参数
         passback_params = quote_plus("&".join(
             f"{k}={v}" for k, v in params.items() if v)) if params else None
-        private_key = RSA.importKey(base64.b64decode(
-            self.alipay_secret).decode('utf-8'))
-        if self.environment == "prod":
-            alipay = AliPay(self.alipay_appid, private_key,
-                            sign_type=self.alipay_sign_type,
-                            return_url=params["return_url"],
-                            notify_url=params["notify_url"])
-        else:
-            alipay = AliPay(self.alipay_appid,
-                            private_key,
-                            return_url=params["return_url"],
-                            notify_url=params["notify_url"],
-                            sign_type=self.alipay_sign_type, sandbox=True)
+        alipay = self._get_alipay()
+        alipay.return_url = f'{base_url}{params["return_url"]}'
+        alipay.notify_url = f'{base_url}{params["notify_url"]}'
 
         return alipay.pay.trade_page_pay(params["reference"], params["amount"],
                                          params["reference"], product_code="FAST_INSTANT_TRADE_PAY",
@@ -69,14 +78,41 @@ class AcquirerAlipay(models.Model):
 
     @api.multi
     def alipay_form_generate_values(self, values):
-        # base_url = self.env['ir.config_parameter'].sudo(
-        # ).get_param('web.base.url')
         alipay_tx_values = dict(values)
         alipay_tx_values.update({
             "return_url": "/payment/alipay/validate",
             "notify_url": "/payment/alipay/notify"
         })
         return alipay_tx_values
+
+    def _verify_pay(self, data):
+        """
+        验证支付宝返回的信息
+        """
+        alipay = self._get_alipay()
+        # 验证是否符合验签逻辑
+        if not alipay.comm.validate_sign(data):
+            _logger.warn(f"支付宝推送支付结果验签失败：{data}")
+            return False
+        # 校验收款方
+        if self.alipay_appid != data["app_id"]:
+            _logger.warn(f"支付宝推送AppID校验失败:{data['app_id']}")
+            return False
+        if self.seller_id != data["seller_id"]:
+            _logger.warn(f"支付宝推送卖家ID校验失败:{data['seller_id']}")
+            return False
+        # 校验支付信息
+        transaction = self.env["payment.transaction"].sudo().search(
+            [('reference', '=', data["out_trade_no"])], limit=1)
+        if float(transaction.amount) != float(data["total_amount"]):
+            _logger.warn(
+                f"支付宝推送金额{float(transaction.amount)}与系统订单不符:{float(data['total_amount'])}")
+            return False
+        # 将支付结果设置完成
+        if transaction.state != "done" and data["trade_status"] == "TRADE_SUCCESS":
+            transaction.acquirer_reference = data["trade_no"]
+            transaction._set_transaction_done()
+        return True
 
 
 class TxAlipay(models.Model):
@@ -105,11 +141,24 @@ class TxAlipay(models.Model):
     @api.multi
     def _alipay_form_validate(self, data):
         """验证支付"""
-        print('*********')
-        print(data)
+        if self.state == 'done':
+            _logger.info(f"支付已经验证：{data['out_trade_no']}")
+            return True
         res = {
-            "acquirer_reference": ""
+            "acquirer_reference": data["trade_no"]
         }
-        # [FIXME]验证具体逻辑
-        self._set_transaction_done()
+        # 根据支付宝同步返回的信息，去支付宝服务器查询
+        alipay = self.env["payment.acquirer"].sudo().search(
+            [('provider', '=', 'alipay')], limit=1)
+        res = alipay.trade_query(out_trade_no=data["out_trade_no"])
+        # 校验结果
+        if res["code"] == "10000" and res["trade_status"] in ("TRADE_SUCCESS", "TRADE_FINISHED"):
+            _logger.info(f"支付单：{data['out_trade_no']} 已成功付款")
+            self._set_transaction_done()
+        if res["code"] == "10000" and res["trade_status"] == "WAIT_BUYER_PAY":
+            _logger.info(f"支付单：{data['out_trade_no']} 正等待付款...")
+            self._set_transaction_pending()
+        if res["code"] == "10000" and res["trade_status"] == "TRADE_CLOSED":
+            _logger.info(f"支付单：{data['out_trade_no']} 已关闭或已退款.")
+            self._set_transaction_cancel()
         return self.write(res)

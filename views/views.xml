@@ -8,6 +8,7 @@
         <xpath expr='//group[@name="acquirer"]' position='after'>
           <group attrs="{'invisible': [('provider', '!=', 'alipay')]}">
             <field name="alipay_appid"/>
+            <field name="seller_id"/>
             <field name="alipay_secret"/>
             <field name="alipay_sign_type"/>
           </group>
