@@ -53,7 +53,7 @@ class Alipay(http.Controller):
             _logger.exception("支付验证失败")
         return redirect_with_hash("/payment/process")
 
-    @http.route('/payment/alipay/notify', crsf=False, type="http", auth='none', method=["POST"])
+    @http.route('/payment/alipay/notify', csrf=False, type="http", auth='none', method=["POST"])
     def alipay_notify(self, **kwargs):
         """接收支付宝异步通知"""
         _logger.debug(f"接收支付宝异步通知...收到的数据:{kwargs}")
