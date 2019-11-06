@@ -149,7 +149,7 @@ class TxAlipay(models.Model):
         if self.state == 'done':
             _logger.info(f"支付已经验证：{data['out_trade_no']}")
             return True
-        res = {
+        result = {
             "acquirer_reference": data["trade_no"]
         }
         # 根据支付宝同步返回的信息，去支付宝服务器查询
@@ -167,4 +167,4 @@ class TxAlipay(models.Model):
         if res["code"] == "10000" and res["trade_status"] == "TRADE_CLOSED":
             _logger.info(f"支付单：{data['out_trade_no']} 已关闭或已退款.")
             self._set_transaction_cancel()
-        return self.write(res)
+        return self.write(result)
