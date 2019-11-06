@@ -54,4 +54,5 @@ class Alipay(http.Controller):
     @http.route('/payment/alipay/notify', type="http", auth='none', method=["POST"])
     def alipay_notify(self, **kwargs):
         """接收支付宝异步通知"""
-        _logger.debug(f"接收支付宝异步通知...收到的数据：{kwargs}")
+        _logger.debug(f"接收支付宝异步通知...收到的数据:{kwargs}")
+        pass
