@@ -10,11 +10,13 @@ _logger = logging.getLogger(__name__)
 class Alipay(http.Controller):
 
     _return_url = "/payment/alipay/validate"
+    _notify_url = "/payment/alipay/notify"
 
     @http.route('/payment_alipay/jump', auth='public')
     def index(self, **kw):
         """跳转至支付宝付款页面"""
         kw["csrf_token"] = request.csrf_token()
+        kw["notify_url"] = self._notify_url
         alipay = request.env["payment.acquirer"].sudo().search(
             [('provider', '=', 'alipay')], limit=1)
         return redirect_with_hash(alipay._get_alipay_url(kw))
