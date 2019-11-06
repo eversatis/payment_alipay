@@ -44,8 +44,8 @@ class AcquirerAlipay(models.Model):
         try:
             private_key = RSA.importKey(base64.b64decode(
                 self.alipay_secret).decode('utf-8'))
-            public_key = RSA.import_key(base64.b64decode(
-                self.alipay_public_key)).decode('utf-8')
+            public_key = RSA.importKey(base64.b64decode(
+                self.alipay_public_key).decode('utf-8'))
 
             if self.environment == "prod":
                 alipay = AliPay(self.alipay_appid, private_key,
@@ -62,6 +62,8 @@ class AcquirerAlipay(models.Model):
     @api.model
     def _get_alipay_url(self, params=None):
         """Alipay URL"""
+        print('---------')
+        print(params)
         base_url = self.env['ir.config_parameter'].sudo(
         ).get_param('web.base.url')
         # 额外的参数
