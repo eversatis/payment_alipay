@@ -48,12 +48,12 @@ class AcquirerAlipay(models.Model):
                 self.alipay_public_key).decode('utf-8'))
 
             if self.environment == "prod":
-                alipay = AliPay(self.alipay_appid, private_key,
+                alipay = AliPay(self.alipay_appid, private_key, ali_public_key=public_key,
                                 sign_type=self.alipay_sign_type)
                 # return_url=params["return_url"],
                 # notify_url=params["notify_url"])
             else:
-                alipay = AliPay(self.alipay_appid, private_key,
+                alipay = AliPay(self.alipay_appid, private_key, ali_public_key=public_key,
                                 sign_type=self.alipay_sign_type, sandbox=True)
             return alipay
         except Exception as err:
@@ -62,8 +62,6 @@ class AcquirerAlipay(models.Model):
     @api.model
     def _get_alipay_url(self, params=None):
         """Alipay URL"""
-        print('---------')
-        print(params)
         base_url = self.env['ir.config_parameter'].sudo(
         ).get_param('web.base.url')
         # 额外的参数
