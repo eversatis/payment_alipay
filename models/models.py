@@ -15,8 +15,8 @@ class AcquirerAlipay(models.Model):
     _inherit = 'payment.acquirer'
 
     provider = fields.Selection(selection_add=[('alipay', "AliPay")])
-    seller_id = fields.Char("Alipay Seller Id", required=True)
-    alipay_appid = fields.Char("Alipay AppId", required=True)
+    seller_id = fields.Char("Alipay Seller Id")
+    alipay_appid = fields.Char("Alipay AppId")
     alipay_secret = fields.Binary("Merchant Private Key")
     alipay_public_key = fields.Binary("Alipay Public Key")
     alipay_sign_type = fields.Selection(
@@ -50,8 +50,6 @@ class AcquirerAlipay(models.Model):
             if self.environment == "prod":
                 alipay = AliPay(self.alipay_appid, private_key, ali_public_key=public_key,
                                 sign_type=self.alipay_sign_type)
-                # return_url=params["return_url"],
-                # notify_url=params["notify_url"])
             else:
                 alipay = AliPay(self.alipay_appid, private_key, ali_public_key=public_key,
                                 sign_type=self.alipay_sign_type, sandbox=True)

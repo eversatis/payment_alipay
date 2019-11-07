@@ -7,8 +7,15 @@
             <field name="provider">alipay</field>
             <field name="enviroment">test</field>
             <field name="alipay_appid">dummy</field>
+            <field name="seller_id">dummy</field>
             <field name="alipay_sign_type">rsa2</field>
             <field name="alipay_secret">dummy</field>
+        </record>
+
+        <record model="payment.icon" id="payment_icon_alipay">
+            <field name="name">Alipay</field>
+            <field name="acquirer_ids" eval="[(4,ref('payment_acquirer_alipay'))]"/>
+            <field name="image" type="base64" file="payment_alipay/static/src/image/alipay.png"/>
         </record>
     </data>
 </odoo>
