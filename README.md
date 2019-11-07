@@ -9,6 +9,7 @@ odoo 支付宝支付模块
 ## Requirements
 
 python >= 3.6
+
 odoo == 12.0
 
 ## Main functionalities
@@ -24,3 +25,4 @@ git clone https://github.com/block-cat/payment_alipay
 
 ## 使用示例
 
+![demo](static/src/image/x.gif)
